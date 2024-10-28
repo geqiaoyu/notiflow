@@ -7,9 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
-    <PackageReference Include="MassTransit.RabbitMQ" Version="8.1.3" />
-    <PackageReference Include="MediatR" Version="12.2.0" />
+    <PackageReference Include="AutoMapper" Version="13.0.1" />
+    <PackageReference Include="MassTransit.RabbitMQ" Version="8.2.3" />
+    <PackageReference Include="MediatR" Version="12.3.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -17,7 +17,6 @@
     <ProjectReference Include="..\..\..\..\..\libs\auth\Puzzle.Lib.Auth\Puzzle.Lib.Auth.csproj" />
     <ProjectReference Include="..\..\..\..\..\libs\cache\Puzzle.Lib.Cache\Puzzle.Lib.Cache.csproj" />
     <ProjectReference Include="..\..\..\..\..\libs\database\Puzzle.Lib.Database\Puzzle.Lib.Database.csproj" />
-    <ProjectReference Include="..\..\..\..\..\libs\localize\Puzzle.Lib.Localize\Puzzle.Lib.Localize.csproj" />
     <ProjectReference Include="..\..\..\..\..\libs\response\Puzzle.Lib.Response\Puzzle.Lib.Response.csproj" />
     <ProjectReference Include="..\..\..\..\..\libs\security\Puzzle.Lib.Security\Puzzle.Lib.Security.csproj" />
     <ProjectReference Include="..\..\..\..\..\libs\validation\Puzzle.Lib.Validation\Puzzle.Lib.Validation.csproj" />

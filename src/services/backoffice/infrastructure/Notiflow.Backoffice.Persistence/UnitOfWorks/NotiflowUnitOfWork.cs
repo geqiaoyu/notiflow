@@ -11,38 +11,28 @@ internal sealed class NotiflowUnitOfWork : INotiflowUnitOfWork
         _context = serviceProvider.GetRequiredService<NotiflowDbContext>();
     }
 
-    public async Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
-       => await _context.Database.BeginTransactionAsync(cancellationToken);
+    public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
+       => _context.Database.BeginTransactionAsync(cancellationToken);
 
-    public Task<int> SaveChangesAsync(CancellationToken cancellationToken)
+    public Task<int> SaveChangesAsync(CancellationToken cancellationToken) => _context.SaveChangesAsync(cancellationToken);
+
+    public async Task UndoChangesAsync(CancellationToken cancellationToken)
     {
-        var baseHistoricalEntities = _context.ChangeTracker.Entries<IBaseHistoricalEntity>();
-
-        foreach (var baseHistoricalEntity in baseHistoricalEntities)
+        foreach (var entry in _context.ChangeTracker.Entries()
+            .Where(e => e.State != EntityState.Unchanged))
         {
-            switch (baseHistoricalEntity.State)
+            switch (entry.State)
             {
                 case EntityState.Added:
-                    baseHistoricalEntity.Property(p => p.UpdatedDate).IsModified = false;
-                    baseHistoricalEntity.Entity.CreatedDate = DateTime.Now;
+                    entry.State = EntityState.Detached;
                     break;
 
                 case EntityState.Modified:
-                    baseHistoricalEntity.Property(p => p.CreatedDate).IsModified = false;
-                    baseHistoricalEntity.Entity.UpdatedDate = DateTime.Now;
+                case EntityState.Deleted:
+                    await entry.ReloadAsync(cancellationToken);
                     break;
             }
         }
-
-        var baseSoftDeleteEntities = _context.ChangeTracker.Entries<IBaseSoftDeleteEntity>();
-
-        foreach (var baseSoftDeleteEntity in baseSoftDeleteEntities)
-        {
-            baseSoftDeleteEntity.State = EntityState.Modified;
-            baseSoftDeleteEntity.Property(p => p.IsDeleted).CurrentValue = true;
-        }
-
-        return _context.SaveChangesAsync(cancellationToken);
     }
 
     public ICustomerReadRepository CustomerRead => _serviceProvider.GetRequiredService<ICustomerReadRepository>();

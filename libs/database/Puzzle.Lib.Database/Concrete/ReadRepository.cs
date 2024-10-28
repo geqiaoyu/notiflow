@@ -1,11 +1,7 @@
 ﻿namespace Puzzle.Lib.Database.Concrete;
 
-public class ReadRepository<TEntity> : Repository<TEntity>, IReadRepository<TEntity> where TEntity : class, new()
+public class ReadRepository<TEntity>(DbContext dbContext) : Repository<TEntity>(dbContext), IReadRepository<TEntity> where TEntity : class, new()
 {
-    public ReadRepository(DbContext dbContext) : base(dbContext)
-    {
-    }
-
     public virtual async Task<PagedResult<TEntity>> GetPageAsync(
        int pageIndex,
        int pageSize,
@@ -158,15 +154,15 @@ public class ReadRepository<TEntity> : Repository<TEntity>, IReadRepository<TEnt
         return await query.ToListAsync(cancellationToken);
     }
 
-    public virtual async Task<TEntity> GetAsync(
+    public virtual Task<TEntity> GetAsync(
         Expression<Func<TEntity, bool>> filter,
         bool stopTracking = true,
         CancellationToken cancellationToken = default)
     {
-        return await SelectEntities(stopTracking).FirstOrDefaultAsync(filter, cancellationToken);
+        return SelectEntities(stopTracking).FirstOrDefaultAsync(filter, cancellationToken);
     }
 
-    public virtual async Task<TEntity> GetAsync(
+    public virtual Task<TEntity> GetAsync(
         Expression<Func<TEntity, bool>> filter,
         Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy,
         bool stopTracking = true,
@@ -177,21 +173,21 @@ public class ReadRepository<TEntity> : Repository<TEntity>, IReadRepository<TEnt
         if (orderBy is not null)
             query = orderBy(query);
 
-        return await query.FirstOrDefaultAsync(filter, cancellationToken);
+        return query.FirstOrDefaultAsync(filter, cancellationToken);
     }
 
-    public virtual async Task<TEntity> GetAsync(
+    public virtual Task<TEntity> GetAsync(
         Expression<Func<TEntity, bool>> filter,
         bool stopTracking = true,
         CancellationToken cancellationToken = default,
         params string[] includes)
     {
-        return await SelectRelationEntities(stopTracking).Includes(includes).FirstOrDefaultAsync(filter, cancellationToken);
+        return SelectRelationEntities(stopTracking).Includes(includes).FirstOrDefaultAsync(filter, cancellationToken);
     }
 
     public virtual async Task<TEntity> GetByIdAsync(object id, CancellationToken cancellationToken)
     {
-        return await _entities.FindAsync(new object[] { id }, cancellationToken);
+        return await _entities.FindAsync([id], cancellationToken);
     }
 
     private IQueryable<TEntity> SelectEntities(bool stopTracking) => stopTracking ? TableNoTracking : Table;

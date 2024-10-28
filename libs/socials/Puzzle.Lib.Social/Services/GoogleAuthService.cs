@@ -11,11 +11,11 @@ internal sealed class GoogleAuthService : IGoogleAuthService
 
     public async Task<GoogleUserResponse> GetUserInformationAsync(string idToken)
     {
-        ArgumentException.ThrowIfNullOrEmpty(idToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(idToken);
 
         Payload payload = await ValidateAsync(idToken, new ValidationSettings
         {
-            Audience = new[] { _googleAuthConfig.ClientId },
+            Audience = [_googleAuthConfig.ClientId],
             IssuedAtClockTolerance = TimeSpan.FromSeconds(1)
         }).ConfigureAwait(false);
 

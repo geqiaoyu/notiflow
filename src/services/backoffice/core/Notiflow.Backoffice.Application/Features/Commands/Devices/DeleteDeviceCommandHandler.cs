@@ -1,38 +1,29 @@
 ﻿namespace Notiflow.Backoffice.Application.Features.Commands.Devices;
 
-public sealed record DeleteDeviceCommand(int Id) : IRequest<Result<Unit>>;
+public sealed record DeleteDeviceCommand(int Id) : IRequest<Result>;
 
-public sealed class DeleteDeviceCommandHandler : IRequestHandler<DeleteDeviceCommand, Result<Unit>>
+public sealed class DeleteDeviceCommandHandler(
+    INotiflowUnitOfWork uow,
+    ILogger<DeleteDeviceCommandHandler> logger) : IRequestHandler<DeleteDeviceCommand, Result>
 {
-    private readonly INotiflowUnitOfWork _uow;
-    private readonly ILogger<DeleteDeviceCommandHandler> _logger;
-
-    public DeleteDeviceCommandHandler(
-        INotiflowUnitOfWork uow,
-        ILogger<DeleteDeviceCommandHandler> logger)
+    public async Task<Result> Handle(DeleteDeviceCommand request, CancellationToken cancellationToken)
     {
-        _uow = uow;
-        _logger = logger;
-    }
-
-    public async Task<Result<Unit>> Handle(DeleteDeviceCommand request, CancellationToken cancellationToken)
-    {
-        bool isDeleted = await _uow.DeviceWrite.ExecuteDeleteByIdAsync(request.Id, cancellationToken);
+        bool isDeleted = await uow.DeviceWrite.ExecuteDeleteByIdAsync(request.Id, cancellationToken);
         if (!isDeleted)
         {
-            return Result<Unit>.Status500InternalServerError(ResultCodes.DEVICE_NOT_DELETED);
+            return Result.Status500InternalServerError(ResultCodes.DEVICE_NOT_DELETED);
         }
 
-        _logger.LogInformation("The device with ID {deviceId} has been deleted.", request.Id);
+        logger.LogInformation("The device with ID {deviceId} has been deleted.", request.Id);
 
-        return Result<Unit>.Status204NoContent(ResultCodes.DEVICE_DELETED);
+        return Result.Status204NoContent();
     }
 }
 
 public sealed class DeleteDeviceCommandValidator : AbstractValidator<DeleteDeviceCommand>
 {
-    public DeleteDeviceCommandValidator(ILocalizerService<ValidationErrorMessage> localizer)
+    public DeleteDeviceCommandValidator()
     {
-        RuleFor(p => p.Id).Id(localizer[ValidationErrorMessage.ID_NUMBER]);
+        RuleFor(p => p.Id).Id(FluentVld.Errors.ID_NUMBER);
     }
 }

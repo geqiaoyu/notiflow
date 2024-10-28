@@ -1,49 +1,40 @@
 ﻿namespace Notiflow.Backoffice.Application.Features.Commands.Customers;
 
-public sealed record UpdateCustomerPhoneNumberCommand(int Id, string PhoneNumber) : IRequest<Result<Unit>>;
+public sealed record UpdateCustomerPhoneNumberCommand(int Id, string PhoneNumber) : IRequest<Result>;
 
-public sealed class UpdateCustomerPhoneNumberCommandHandler : IRequestHandler<UpdateCustomerPhoneNumberCommand, Result<Unit>>
+public sealed class UpdateCustomerPhoneNumberCommandHandler(
+    INotiflowUnitOfWork uow,
+    ILogger<UpdateCustomerPhoneNumberCommandHandler> logger) : IRequestHandler<UpdateCustomerPhoneNumberCommand, Result>
 {
-    private readonly INotiflowUnitOfWork _uow;
-    private readonly ILogger<UpdateCustomerPhoneNumberCommandHandler> _logger;
-
-    public UpdateCustomerPhoneNumberCommandHandler(
-        INotiflowUnitOfWork uow,
-        ILogger<UpdateCustomerPhoneNumberCommandHandler> logger)
+    public async Task<Result> Handle(UpdateCustomerPhoneNumberCommand request, CancellationToken cancellationToken)
     {
-        _uow = uow;
-        _logger = logger;
-    }
-
-    public async Task<Result<Unit>> Handle(UpdateCustomerPhoneNumberCommand request, CancellationToken cancellationToken)
-    {
-        var customer = await _uow.CustomerRead.GetByIdAsync(request.Id, cancellationToken);
+        var customer = await uow.CustomerRead.GetByIdAsync(request.Id, cancellationToken);
         if (customer is null)
         {
-            return Result<Unit>.Status404NotFound(ResultCodes.CUSTOMER_NOT_FOUND);
+            return Result.Status404NotFound(ResultCodes.CUSTOMER_NOT_FOUND);
         }
 
-        if (string.Equals(customer.PhoneNumber, request.PhoneNumber))
+        if (string.Equals(customer.PhoneNumber, request.PhoneNumber, StringComparison.OrdinalIgnoreCase))
         {
-            _logger.LogWarning("The phone number to be changed is the same as in the current one. Customer ID: {customerId}", request.Id);
-            return Result<Unit>.Status400BadRequest(ResultCodes.CUSTOMER_PHONE_NUMBER_SAME);
+            logger.LogWarning("The phone number to be changed is the same as in the current one. Customer ID: {customerId}", request.Id);
+            return Result.Status400BadRequest(ResultCodes.CUSTOMER_PHONE_NUMBER_SAME);
         }
 
         customer.PhoneNumber = request.PhoneNumber;
 
-        await _uow.SaveChangesAsync(cancellationToken);
+        await uow.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("The customer's phone number has been updated. ID: {customerId}", request.Id);
+        logger.LogInformation("The customer's phone number has been updated. ID: {customerId}", request.Id);
 
-        return Result<Unit>.Status204NoContent(ResultCodes.CUSTOMER_PHONE_NUMBER_UPDATED);
+        return Result.Status204NoContent();
     }
 }
 
 public sealed class UpdateCustomerPhoneNumberCommandValidator : AbstractValidator<UpdateCustomerPhoneNumberCommand>
 {
-    public UpdateCustomerPhoneNumberCommandValidator(ILocalizerService<ValidationErrorMessage> localizer)
+    public UpdateCustomerPhoneNumberCommandValidator()
     {
-        RuleFor(p => p.Id).Id(localizer[ValidationErrorMessage.ID_NUMBER]);
-        RuleFor(p => p.PhoneNumber).MobilePhone(localizer[ValidationErrorMessage.PHONE_NUMBER]);
+        RuleFor(p => p.Id).Id(FluentVld.Errors.ID_NUMBER);
+        RuleFor(p => p.PhoneNumber).MobilePhone(FluentVld.Errors.PHONE_NUMBER);
     }
 }

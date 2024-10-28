@@ -1,14 +1,15 @@
 ﻿namespace Puzzle.Lib.Security.Middlewares;
 
-public sealed class SecurityHeadersMiddleware
+/// <summary>
+/// Middleware for adding security headers to the HTTP response.
+/// </summary>
+public sealed class SecurityHeadersMiddleware(RequestDelegate next)
 {
-    private readonly RequestDelegate _next;
-
-    public SecurityHeadersMiddleware(RequestDelegate next)
-    {
-        _next = next;
-    }
-
+    /// <summary>
+    /// Invokes the middleware to add security headers to the HTTP response.
+    /// </summary>
+    /// <param name="context">The current HTTP context.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task InvokeAsync(HttpContext context)
     {
         context.Response.Headers.Append("X-Xss-Protection", "1; mode=block");
@@ -18,7 +19,7 @@ public sealed class SecurityHeadersMiddleware
         context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
         context.Response.Headers.Append("X-Frame-Options", "DENY");
 
-        await _next.Invoke(context);
+        await next.Invoke(context);
 
         if (!context.Response.HasStarted)
         {

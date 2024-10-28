@@ -10,62 +10,45 @@ public sealed record UpdateCustomerCommand(
     Gender Gender,
     MarriageStatus MarriageStatus
     )
-    : IRequest<Result<Unit>>;
+    : IRequest<Result>;
 
-public sealed class UpdateCustomerCommandHandler : IRequestHandler<UpdateCustomerCommand, Result<Unit>>
-{
-    private readonly INotiflowUnitOfWork _uow;
-    private readonly ILogger<UpdateCustomerCommandHandler> _logger;
-
-    public UpdateCustomerCommandHandler(
+public sealed class UpdateCustomerCommandHandler(
         INotiflowUnitOfWork uow,
-        ILogger<UpdateCustomerCommandHandler> logger)
+        ILogger<UpdateCustomerCommandHandler> logger) : IRequestHandler<UpdateCustomerCommand, Result>
+{
+    public async Task<Result> Handle(UpdateCustomerCommand request, CancellationToken cancellationToken)
     {
-        _uow = uow;;
-        _logger = logger;
-    }
-
-    public async Task<Result<Unit>> Handle(UpdateCustomerCommand request, CancellationToken cancellationToken)
-    {
-        var customer = await _uow.CustomerRead.GetByIdAsync(request.Id, cancellationToken);
+        var customer = await uow.CustomerRead.GetByIdAsync(request.Id, cancellationToken);
         if (customer is null)
         {
-            return Result<Unit>.Status404NotFound(ResultCodes.CUSTOMER_NOT_FOUND);
+            return Result.Status404NotFound(ResultCodes.CUSTOMER_NOT_FOUND);
         }
 
         ObjectMapper.Mapper.Map(request, customer);
 
-        _uow.CustomerWrite.Update(customer);
-        await _uow.SaveChangesAsync(cancellationToken);
+        uow.CustomerWrite.Update(customer);
+        await uow.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Customer updated. ID: {customerId}", request.Id);
+        logger.LogInformation("Customer updated. ID: {customerId}", request.Id);
 
-        return Result<Unit>.Status204NoContent(ResultCodes.CUSTOMER_UPDATED);
+        return Result.Status204NoContent();
     }
 }
 
 public sealed class UpdateCustomerCommandValidator : AbstractValidator<UpdateCustomerCommand>
 {
-    public UpdateCustomerCommandValidator(ILocalizerService<ValidationErrorMessage> localizer)
+    private const int CUSTOMER_NAME_MAX_LENGTH = 50;
+    private const int CUSTOMER_SURNAME_MAX_LENGTH = 75;
+
+    public UpdateCustomerCommandValidator()
     {
-        RuleFor(p => p.Id).Id(localizer[ValidationErrorMessage.ID_NUMBER]);
-
-        RuleFor(p => p.Name)
-           .NotNullAndNotEmpty(localizer[ValidationErrorMessage.CUSTOMER_NAME])
-           .MaximumLength(50).WithMessage(localizer[ValidationErrorMessage.CUSTOMER_NAME]);
-
-        RuleFor(p => p.Surname)
-            .NotNullAndNotEmpty(localizer[ValidationErrorMessage.CUSTOMER_SURNAME])
-            .MaximumLength(75).WithMessage(localizer[ValidationErrorMessage.CUSTOMER_SURNAME]);
-
-        RuleFor(p => p.PhoneNumber).MobilePhone(localizer[ValidationErrorMessage.PHONE_NUMBER]);
-
-        RuleFor(p => p.Email).Email(localizer[ValidationErrorMessage.EMAIL]);
-
-        RuleFor(p => p.BirthDate).BirthDate(localizer[ValidationErrorMessage.BIRTH_DATE]);
-
-        RuleFor(p => p.Gender).Enum(localizer[ValidationErrorMessage.GENDER]);
-
-        RuleFor(p => p.MarriageStatus).Enum(localizer[ValidationErrorMessage.MARRIAGE_STATUS]);
+        RuleFor(p => p.Id).Id(FluentVld.Errors.ID_NUMBER);
+        RuleFor(p => p.Name).Ensure(FluentVld.Errors.CUSTOMER_NAME, CUSTOMER_NAME_MAX_LENGTH);
+        RuleFor(p => p.Surname).Ensure(FluentVld.Errors.CUSTOMER_SURNAME, CUSTOMER_SURNAME_MAX_LENGTH);
+        RuleFor(p => p.PhoneNumber).MobilePhone(FluentVld.Errors.PHONE_NUMBER);
+        RuleFor(p => p.Email).Email(FluentVld.Errors.EMAIL);
+        RuleFor(p => p.BirthDate).BirthDate(FluentVld.Errors.BIRTH_DATE);
+        RuleFor(p => p.Gender).Enum(FluentVld.Errors.GENDER);
+        RuleFor(p => p.MarriageStatus).Enum(FluentVld.Errors.MARRIAGE_STATUS);
     }
 }
